@@ -104,6 +104,17 @@ button.refresh:hover{
 button i {
     margin-right: 8px; /* Adjust the spacing */
 }
+
+#searchBtn {
+    background-color: #28a745; /* Green example */
+    border: none;
+    color: white;
+}
+
+#searchBtn:hover {
+    background-color: #218838; /* Darker green on hover */
+}
+
 @media (max-width: 767px) {
     .container {
         width: 90%; /* instead of fixed 26% */
