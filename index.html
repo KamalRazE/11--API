@@ -1,74 +1,100 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Weather App</title>
-    <link href='https://fonts.googleapis.com/css?family=Poppins' rel='stylesheet'>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/css/bootstrap.min.css"
-        crossorigin="anonymous">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" type="text/css" href="api.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Weather App</title>
+  <link href="https://fonts.googleapis.com/css?family=Poppins" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/css/bootstrap.min.css" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" type="text/css" href="api.css">
 </head>
-
 <body>
-    <div class="container mt-5">
-        <div class="card p-4 text-center">
-            <h2><i class="fa-solid fa-location-dot"></i> <span id="location"></span></h2>
-            <h6 id="Weather"></h6>
-            <img src="" id="icon" alt="Weather Icon">
-            <h4><span id="temp"></span><sup>°</sup>C</h4>
+  <div class="container mt-5">
+    <div class="card p-4 text-center">
+      <h2><i class="fa-solid fa-location-dot"></i> <span id="location"></span></h2>
+      <h6 id="weather"></h6>
+      <img src="" id="icon" alt="Weather Icon" />
+      <h4><span id="temp"></span><sup>°</sup>C</h4>
 
-            <form id="weatherForm" class="mt-3">
-                <input type="text" id="cityInput" class="form-control" placeholder="Enter city name" required>
-                <button type="submit" id="searchBtn" class="btn btn-primary mt-2">Get Weather</button>
-            </form>
+      <form id="weatherForm" class="mt-3">
+        <input type="text" id="cityInput" class="form-control" placeholder="Enter city name" required />
+        <button type="submit" id="searchBtn" class="btn btn-primary mt-2">Get Weather</button>
+      </form>
 
-            <button onclick="refreshWeather()" class="refresh-btn" >
-                <i class="fa fa-refresh"></i> Refresh
-            </button>
-        </div>
-
+      <!-- NOTE: type="button" so it never submits the form -->
+      <button type="button" id="refreshBtn" class="btn btn-outline-secondary mt-3">
+        <i class="fa-solid fa-rotate-right"></i> Refresh
+      </button>
     </div>
+  </div>
 
-    <script>
-        const apiKey = "2839f7ca122764816d4e2e56f5afffa0";
+  <script>
+    const apiKey = "2839f7ca122764816d4e2e56f5afffa0";
+    const locationEl = document.getElementById("location");
+    const weatherEl  = document.getElementById("weather");
+    const tempEl     = document.getElementById("temp");
+    const iconEl     = document.getElementById("icon");
+    const cityInput  = document.getElementById("cityInput");
+    const refreshBtn = document.getElementById("refreshBtn");
 
-        document.getElementById("weatherForm").addEventListener("submit", function (event) {
-            event.preventDefault(); // Prevents the form from reloading the page
-            const city = document.getElementById("cityInput").value.trim();
-            getWeather(city);
-        });
+    const defaultCity = "Hyderabad"; 
+    let lastCity = localStorage.getItem("lastCity") || defaultCity;
 
-        function getWeather(city) {
-            const link = `https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${apiKey}&units=metric`;
+    document.getElementById("weatherForm").addEventListener("submit", (e) => {
+      e.preventDefault();
+      const city = cityInput.value.trim();
+      if (!city) return;
+      fetchWeather(city);
+    });
 
-            const request = new XMLHttpRequest();
-            request.open('GET', link, true);
+    refreshBtn.addEventListener("click", () => {
+      fetchWeather(lastCity);
+    });
 
-            request.onload = function () {
-                if (request.status >= 200 && request.status < 400) {
-                    const obj = JSON.parse(this.response);
-                    document.getElementById("location").textContent = obj.name;
-                    document.getElementById("Weather").textContent = obj.weather[0].description;
-                    document.getElementById("temp").textContent = obj.main.temp;
-                    document.getElementById("icon").src = `https://openweathermap.org/img/wn/${obj.weather[0].icon}@2x.png`;
-                } else {
-                    alert("City not found!");
-                }
-            };
+    async function fetchWeather(city) {
+      try {
+        setLoading(true);
+        const url = `https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(city)}&appid=${apiKey}&units=metric`;
+        const res = await fetch(url);
 
-            request.onerror = function () {
-                alert("Connection error");
-            };
-
-            request.send();
+        if (!res.ok) {
+          throw new Error("City not found");
         }
 
-        // Load default city weather
-        getWeather("antarctica");
-    </script>
-</body>
+        const obj = await res.json();
+        updateUI(obj);
 
+        lastCity = obj.name;
+        localStorage.setItem("lastCity", lastCity);
+      } catch (err) {
+        alert(err.message || "Something went wrong");
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    function updateUI(obj) {
+      locationEl.textContent = `${obj.name}${obj.sys?.country ? ", " + obj.sys.country : ""}`;
+      const description = obj.weather?.[0]?.description || "";
+      weatherEl.textContent = description.charAt(0).toUpperCase() + description.slice(1);
+      tempEl.textContent = Math.round(obj.main?.temp ?? 0);
+      iconEl.src = `https://openweathermap.org/img/wn/${obj.weather?.[0]?.icon}@2x.png`;
+      iconEl.alt = description || "Weather Icon";
+    }
+
+    function setLoading(isLoading) {
+      refreshBtn.disabled = isLoading;
+      const icon = refreshBtn.querySelector("i");
+      if (isLoading) {
+        icon.classList.add("fa-spin");
+      } else {
+        icon.classList.remove("fa-spin");
+      }
+    }
+
+    // Initial load
+    fetchWeather(lastCity);
+  </script>
+</body>
 </html>
