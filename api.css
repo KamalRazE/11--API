@@ -46,7 +46,6 @@ body{
     margin: 0 auto;
 }
 
-/* IDs are case-sensitive, match the HTML */
 #Weather{
     text-transform: capitalize;
     font-size: 1.2rem;
